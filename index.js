@@ -66,7 +66,7 @@ async function run() {
             const result = await cursor.toArray();
 
             res.send(result);
-        })
+        });
 
 
         app.post('/api/classes', async (req, res) => {
@@ -75,12 +75,32 @@ async function run() {
 
             const result = await classCollection.insertOne(newClass);
             res.send(result);
-        })
+        });
 
 
 
 
         //forum post api
+
+
+
+        app.get('/api/forum', async (req, res) => {
+
+            const query = {};
+
+            if(req.query.trainerId){
+
+                query.trainerId = req.query.trainerId;
+
+            }
+
+            const cursor = forumPostCollection.find(query);
+            const result = await cursor.toArray();
+
+            res.send(result);
+        });
+
+
 
         app.post('/api/forum', async (req, res) => {
 
@@ -88,7 +108,7 @@ async function run() {
 
             const result = await forumPostCollection.insertOne(newPost);
             res.send(result);
-        })
+        });
 
 
 
