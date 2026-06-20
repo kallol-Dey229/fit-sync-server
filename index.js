@@ -39,16 +39,54 @@ async function run() {
 
 
         const database = client.db("fit-sync");
-        const ClassCollection = database.collection("classes");
+        const classCollection = database.collection("classes");
+        const forumPostCollection = database.collection("forum");
 
 
         //class api
 
-        app.post('/api/classes', (req, res) => {
+
+        app.get('/api/classes', async (req, res) => {
+
+            const query = {};
+
+            if(req.query.trainerId){
+
+                query.trainerId = req.query.trainerId;
+
+            }
+
+            if(req.query.status){
+
+                query.status = req.query.status;
+
+            }
+
+            const cursor = classCollection.find(query);
+            const result = await cursor.toArray();
+
+            res.send(result);
+        })
+
+
+        app.post('/api/classes', async (req, res) => {
 
             const newClass = req.body;
 
-            const result = await ClassCollection.insertOne(newClass);
+            const result = await classCollection.insertOne(newClass);
+            res.send(result);
+        })
+
+
+
+
+        //forum post api
+
+        app.post('/api/forum', async (req, res) => {
+
+            const newPost = req.body;
+
+            const result = await forumPostCollection.insertOne(newPost);
             res.send(result);
         })
 
