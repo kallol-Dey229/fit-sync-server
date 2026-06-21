@@ -41,6 +41,7 @@ async function run() {
         const database = client.db("fit-sync");
         const classCollection = database.collection("classes");
         const forumPostCollection = database.collection("forum");
+        const commentCollection = database.collection("comments");
 
 
         //class api
@@ -120,7 +121,7 @@ async function run() {
 
 
         app.get('/api/forum/:id', async (req, res) => {
-            
+
             const { id } = req.params;
 
             const result = await forumPostCollection.findOne({ _id: new ObjectId(id) });
@@ -137,6 +138,60 @@ async function run() {
 
             const result = await forumPostCollection.insertOne(newPost);
             res.send(result);
+        });
+
+
+        //comments api
+
+
+        app.get('/api/comments/:id', async (req, res) => {
+
+            const { id } = req.params;
+
+            const result = await commentCollection.find({ forumPostId: id }).toArray();
+            res.json(result);
+        });
+
+
+
+        app.post('/api/comments', async (req, res) => {
+
+            const commentData = req.body;
+
+            const result = await commentCollection.insertOne(commentData);
+
+            res.json(result);
+        });
+
+
+
+
+        app.patch('/api/comments/:id', async (req, res) => {
+
+            const { id } = req.params;
+            const commentData = req.body;
+
+            const result = await commentCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: commentData });
+
+            res.json(result);
+        })
+
+
+
+        app.delete("/api/comments/:id", async (req, res) => {
+
+            const { id } = req.params;
+            const { userId } = req.body;
+
+            const result = await commentCollection.deleteOne({
+                _id: new ObjectId(id),
+                userId: userId,
+            });
+
+            res.json(result);
+
         });
 
 
