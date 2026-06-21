@@ -83,8 +83,15 @@ async function run() {
         //forum post api
 
 
-
         app.get('/api/forum', async (req, res) => {
+            const cursor = forumPostCollection.find({});
+            const result = await cursor.toArray();
+
+            res.send(result);
+        })
+
+
+        app.get('/api/my/forum', async (req, res) => {
 
             const query = {};
 
