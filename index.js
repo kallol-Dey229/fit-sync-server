@@ -10,7 +10,7 @@ app.use(express.json());
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 app.get('/', (req, res) => {
     res.send('Server is running........!')
@@ -60,13 +60,13 @@ async function run() {
 
             const query = {};
 
-            if(req.query.trainerId){
+            if (req.query.trainerId) {
 
                 query.trainerId = req.query.trainerId;
 
             }
 
-            if(req.query.status){
+            if (req.query.status) {
 
                 query.status = req.query.status;
 
@@ -105,7 +105,7 @@ async function run() {
 
             const query = {};
 
-            if(req.query.trainerId){
+            if (req.query.trainerId) {
 
                 query.trainerId = req.query.trainerId;
 
@@ -116,6 +116,18 @@ async function run() {
 
             res.send(result);
         });
+
+
+
+        app.get('/api/forum/:id', async (req, res) => {
+            
+            const { id } = req.params;
+
+            const result = await forumPostCollection.findOne({ _id: new ObjectId(id) });
+
+            res.json(result);
+        })
+
 
 
 
