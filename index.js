@@ -57,6 +57,16 @@ async function run() {
         })
 
 
+        app.get('/api/classes/:id', async (req, res) => {
+
+            const { id } = req.params;
+
+            const result = await classCollection.findOne({ _id: new ObjectId(id) });
+
+            res.json(result);
+        })
+
+
         app.get('/api/my/classes', async (req, res) => {
 
             const query = {};
