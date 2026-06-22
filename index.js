@@ -42,6 +42,8 @@ async function run() {
         const classCollection = database.collection("classes");
         const forumPostCollection = database.collection("forum");
         const commentCollection = database.collection("comments");
+        const favoritesCollection = database.collection("favorites");
+        const enrollmentCollection = database.collection("enrollments");
 
 
         //class api
@@ -203,6 +205,56 @@ async function run() {
             res.json(result);
 
         });
+
+
+
+
+        // favorites apis
+
+
+        app.post("/api/favorites", async (req, res) => {
+
+            const favorite = req.body;
+
+            const exists = await favoritesCollection.findOne({
+                userId: favorite.userId,
+                classId: favorite.classId,
+            });
+
+            if (exists) {
+                return res.send({
+                    success: false,
+                    message: "Already added",
+                });
+            }
+
+            const result = await favoritesCollection.insertOne(favorite);
+
+            res.send({
+                success: true,
+                result,
+            });
+        });
+
+
+
+
+
+
+
+        app.get('/api/favorites', async (req, res) => {
+            const { userId } = req.query;
+
+            if (!userId) {
+                return res.send({ success: false, message: "Missing userId" });
+            }
+
+            const result = await favoritesCollection.find({ userId: String(userId) }).toArray();
+            res.send({ success: true, data: result });
+        });
+
+
+
 
 
 
