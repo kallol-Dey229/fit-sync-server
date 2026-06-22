@@ -176,17 +176,17 @@ async function run() {
 
 
 
-        app.patch('/api/comments/:id', async (req, res) => {
+        // app.patch('/api/comments/:id', async (req, res) => {
 
-            const { id } = req.params;
-            const commentData = req.body;
+        //     const { id } = req.params;
+        //     const commentData = req.body;
 
-            const result = await commentCollection.updateOne(
-                { _id: new ObjectId(id) },
-                { $set: commentData });
+        //     const result = await commentCollection.updateOne(
+        //         { _id: new ObjectId(id) },
+        //         { $set: commentData });
 
-            res.json(result);
-        })
+        //     res.json(result);
+        // })
 
 
 
