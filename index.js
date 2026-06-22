@@ -43,7 +43,9 @@ async function run() {
         const forumPostCollection = database.collection("forum");
         const commentCollection = database.collection("comments");
         const favoritesCollection = database.collection("favorites");
-        const enrollmentCollection = database.collection("enrollments");
+        const applicationCollection = database.collection("application");
+        const usersCollection = database.collection("user");
+        // const enrollmentCollection = database.collection("enrollments");
 
 
         //class api
@@ -253,6 +255,35 @@ async function run() {
             res.send({ success: true, data: result });
         });
 
+
+
+
+
+        // application api
+
+
+        app.post('/api/application', async (req, res) => {
+
+            const newApplication = req.body;
+
+            const result = await applicationCollection.insertOne(newApplication);
+
+            res.send(result);
+        });
+
+
+
+
+
+        //users api
+
+        app.get('/api/user', async (req, res) => {
+            
+            const cursor = usersCollection.find({});
+            const result = await cursor.toArray();
+
+            res.send(result);
+        })
 
 
 
