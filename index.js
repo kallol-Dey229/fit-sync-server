@@ -580,6 +580,22 @@ async function run() {
         // favorites apis
 
 
+
+        app.get('/api/favorites', async (req, res) => {
+            const { userId } = req.query;
+
+            if (!userId) {
+                return res.send({ success: false, message: "Missing userId" });
+            }
+
+            const result = await favoritesCollection.find({ userId: String(userId) }).toArray();
+            res.send({ success: true, data: result });
+        });
+
+
+
+
+
         app.post("/api/favorites", async (req, res) => {
 
             const favorite = req.body;
@@ -607,19 +623,30 @@ async function run() {
 
 
 
+        app.delete('/api/favorites', async (req, res) => {
+            const { userId, classId } = req.body;
 
-
-
-        app.get('/api/favorites', async (req, res) => {
-            const { userId } = req.query;
-
-            if (!userId) {
-                return res.send({ success: false, message: "Missing userId" });
+            if (!userId || !classId) {
+                return res.status(400).send({ success: false, message: "userId and classId are required" });
             }
 
-            const result = await favoritesCollection.find({ userId: String(userId) }).toArray();
-            res.send({ success: true, data: result });
+            const result = await favoritesCollection.deleteOne({
+                userId: String(userId),
+                classId: String(classId),
+            });
+
+            if (result.deletedCount === 0) {
+                return res.status(404).send({ success: false, message: "Favorite not found" });
+            }
+
+            res.send({ success: true });
         });
+
+
+
+
+
+        
 
 
 
@@ -647,6 +674,57 @@ async function run() {
             res.send(result);
 
         })
+
+
+
+        app.get('/api/application/user/:userId', async (req, res) => {
+
+            const { userId } = req.params;
+
+            const result = await applicationCollection
+                .find({ userId: String(userId) })
+                .sort({ createdAt: -1 })
+                .limit(1)
+                .toArray();
+
+            res.send(result[0] || null);
+        });
+
+
+        
+         app.patch('/api/application/:id', async (req, res) => {
+            const { id } = req.params;
+            const { status } = req.body;
+
+            const allowedStatuses = ["ACTIVE", "APPROVED", "REJECTED", "BLOCKED"];
+
+            const application = await applicationCollection.findOne({ _id: new ObjectId(id) });
+
+            const result = await applicationCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: { status, statusUpdatedAt: new Date() } }
+            );
+
+            if (result.matchedCount === 0) {
+                return res.status(404).send({ message: "Application not found" });
+            }
+
+            if (application.userId && ObjectId.isValid(application.userId)) {
+                if (status === "APPROVED") {
+                    await usersCollection.updateOne(
+                        { _id: new ObjectId(application.userId) },
+                        { $set: { role: "trainer" } }
+                    );
+                } else if (status === "REJECTED") {
+                    await usersCollection.updateOne(
+                        { _id: new ObjectId(application.userId) },
+                        { $set: { role: "member" } }
+                    );
+                }
+            }
+
+            res.send({ success: true, status });
+        });
 
 
 
@@ -716,12 +794,10 @@ async function run() {
             const existing = await purchasesCollection.findOne({ classId, buyerEmail });
             if (existing) return res.send(existing);
 
-            if (!ObjectId.isValid(classId)) {
-                return res.status(400).send({ message: "Invalid book id" });
-            }
+            
 
             const classes = await classCollection.findOne({ _id: new ObjectId(classId) });
-            if (!classes) return res.status(404).send({ message: "Book not found" });
+            
 
             const purchase = {
                 classId,
