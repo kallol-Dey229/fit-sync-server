@@ -27,7 +27,7 @@ const uri = process.env.MONGO_DB_URI;
 const client = new MongoClient(uri, {
     serverApi: {
         version: ServerApiVersion.v1,
-        strict: true,
+        strict: false,
         deprecationErrors: true,
     }
 });
@@ -267,6 +267,7 @@ async function run() {
 
 
         app.delete('/api/favorites', async (req, res) => {
+
             const { userId, classId } = req.body;
 
             const result = await favoritesCollection.deleteOne({
@@ -577,8 +578,6 @@ async function run() {
     }
 }
 run().catch(console.dir);
-
-
 
 
 
