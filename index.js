@@ -516,6 +516,12 @@ async function run() {
 
             const newPost = req.body;
 
+            const author = await usersCollection.findOne({ _id: new ObjectId(newPost.userId) });
+
+            if (author?.status === "BLOCKED") {
+                return res.status(403).send({ message: "Your account is blocked from posting." });
+            }
+
             const result = await forumPostCollection.insertOne(newPost);
             res.send(result);
         });
@@ -537,6 +543,11 @@ async function run() {
         app.post('/api/comments', async (req, res) => {
 
             const commentData = req.body;
+
+            const author = await usersCollection.findOne({ _id: new ObjectId(commentData.userId) });
+            if (author?.status === "BLOCKED") {
+                return res.status(403).send({ message: "Your account is blocked from posting." });
+            }
 
             const result = await commentCollection.insertOne(commentData);
 
@@ -582,11 +593,8 @@ async function run() {
 
 
         app.get('/api/favorites', async (req, res) => {
-            const { userId } = req.query;
 
-            if (!userId) {
-                return res.send({ success: false, message: "Missing userId" });
-            }
+            const { userId } = req.query;
 
             const result = await favoritesCollection.find({ userId: String(userId) }).toArray();
             res.send({ success: true, data: result });
@@ -646,7 +654,7 @@ async function run() {
 
 
 
-        
+
 
 
 
@@ -691,8 +699,8 @@ async function run() {
         });
 
 
-        
-         app.patch('/api/application/:id', async (req, res) => {
+
+        app.patch('/api/application/:id', async (req, res) => {
             const { id } = req.params;
             const { status } = req.body;
 
@@ -737,8 +745,80 @@ async function run() {
             const cursor = usersCollection.find({});
             const result = await cursor.toArray();
 
-            res.send(result);
+            const withDefaults = result.map((u) => ({
+                status: "ACTIVE",
+                ...u,
+            }));
+
+            res.send(withDefaults);
         })
+
+
+
+        app.patch('/api/user/:id/status', async (req, res) => {
+            const { id } = req.params;
+            const { status } = req.body;
+
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).send({ message: "Invalid user id" });
+            }
+
+            if (!["ACTIVE", "BLOCKED"].includes(status)) {
+                return res.status(400).send({ message: "Invalid status value" });
+            }
+
+            const result = await usersCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: { status } }
+            );
+
+            if (result.matchedCount === 0) {
+                return res.status(404).send({ message: "User not found" });
+            }
+
+            res.send({ success: true, status });
+        });
+
+
+
+        // promote a user to admin, or demote an admin back to their previous role
+
+        app.patch('/api/user/:id/role', async (req, res) => {
+
+            const { id } = req.params;
+            const { action } = req.body; 
+
+            const targetUser = await usersCollection.findOne({ _id: new ObjectId(id) });
+            
+            if (action === "promote") {
+
+                if (targetUser.role === "admin") {
+                    return res.status(400).send({ message: "User is already an admin" });
+                }
+
+                await usersCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: { role: "admin", previousRole: targetUser.role || "member" } }
+                );
+
+                return res.send({ success: true, role: "admin" });
+            }
+
+            if (action === "demote") {
+                if (targetUser.role !== "admin") {
+                    return res.status(400).send({ message: "User is not an admin" });
+                }
+
+                const restoredRole = targetUser.previousRole || "member";
+
+                await usersCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: { role: restoredRole }, $unset: { previousRole: "" } }
+                );
+
+                return res.send({ success: true, role: restoredRole });
+            }
+        });
 
 
 
@@ -746,7 +826,7 @@ async function run() {
 
         //
 
-        // check if a buyer already purchased a given class
+        
         app.get("/api/purchases/check", async (req, res) => {
             const { classId, email } = req.query;
 
@@ -794,10 +874,10 @@ async function run() {
             const existing = await purchasesCollection.findOne({ classId, buyerEmail });
             if (existing) return res.send(existing);
 
-            
+
 
             const classes = await classCollection.findOne({ _id: new ObjectId(classId) });
-            
+
 
             const purchase = {
                 classId,
@@ -805,7 +885,7 @@ async function run() {
                 price: classes.price,
                 buyerEmail,
                 buyerName: buyerName,
-                trainerName:classes.trainerName,
+                trainerName: classes.trainerName,
                 schedule: Array.isArray(classes.schedule) ? classes.schedule : [],
                 stripeSessionId: stripeSessionId || null,
                 purchasedAt: new Date(),
