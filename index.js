@@ -46,6 +46,77 @@ async function run() {
         const applicationCollection = database.collection("application");
         const usersCollection = database.collection("user");
         const purchasesCollection = database.collection("purchases");
+        const sessionCollection = database.collection('session');
+
+
+         // verification related
+
+        const verifyToken = async (req, res, next) => {
+
+            const authHeader = req.headers?.authorization;
+            if (!authHeader) {
+                return res.status(401).send({ message: 'unauthorized access' })
+            }
+
+            const token = authHeader.split(' ')[1]
+
+            if (!token) {
+                return res.status(401).send({ message: 'unauthorized access' })
+            }
+
+            const query = { token: token }
+            const session = await sessionCollection.findOne(query);
+
+              if (!session) {
+                return res.status(401).send({ message: 'unauthorized access' })
+            }
+
+            const userId = session.userId;
+
+
+            const userQuery = {
+                _id: userId
+            }
+
+            const user = await usersCollection.findOne(userQuery);
+              if (!user) {
+                return res.status(401).send({ message: 'unauthorized access' })
+            }
+            // set data in the req object
+            req.user = user;
+            next();
+        }
+
+
+        // must be used after verifyToken middleware
+        const verifyMember = async (req, res, next) => {
+            if (req.user?.role !== 'member') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
+
+
+
+        // must be used after verifyToken middleware
+        const verifyTrainer = async (req, res, next) => {
+            if (req.user?.role !== 'trainer') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
+
+        
+
+        // must be used after verifyToken middleware
+        const verifyAdmin = async (req, res, next) => {
+            if (req.user.role !== 'admin') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
+
+
 
 
 
@@ -72,7 +143,7 @@ async function run() {
         })
 
 
-        app.get('/api/my/classes', async (req, res) => {
+        app.get('/api/my/classes',verifyToken,verifyTrainer, async (req, res) => {
 
             const query = {};
 
@@ -95,7 +166,7 @@ async function run() {
         });
 
 
-        app.post('/api/classes', async (req, res) => {
+        app.post('/api/classes',verifyToken,verifyTrainer, async (req, res) => {
 
             const newClass = req.body;
 
@@ -147,7 +218,7 @@ async function run() {
 
 
 
-        app.post('/api/forum', async (req, res) => {
+        app.post('/api/forum',verifyToken, async (req, res) => {
 
             const newPost = req.body;
 
@@ -175,7 +246,7 @@ async function run() {
 
 
 
-        app.post('/api/comments', async (req, res) => {
+        app.post('/api/comments',verifyToken, async (req, res) => {
 
             const commentData = req.body;
 
@@ -206,7 +277,7 @@ async function run() {
 
 
 
-        app.delete("/api/comments/:id", async (req, res) => {
+        app.delete("/api/comments/:id", verifyToken, async (req, res) => {
 
             const { id } = req.params;
             const { userId } = req.body;
@@ -227,7 +298,7 @@ async function run() {
 
 
 
-        app.get('/api/favorites', async (req, res) => {
+        app.get('/api/favorites',verifyToken, async (req, res) => {
 
             const { userId } = req.query;
 
@@ -239,7 +310,7 @@ async function run() {
 
 
 
-        app.post("/api/favorites", async (req, res) => {
+        app.post("/api/favorites",verifyToken, async (req, res) => {
 
             const favorite = req.body;
 
@@ -266,7 +337,7 @@ async function run() {
 
 
 
-        app.delete('/api/favorites', async (req, res) => {
+        app.delete('/api/favorites',verifyToken, async (req, res) => {
 
             const { userId, classId } = req.body;
 
@@ -284,7 +355,7 @@ async function run() {
         // application api
 
 
-        app.post('/api/application', async (req, res) => {
+        app.post('/api/application',verifyToken,verifyMember, async (req, res) => {
 
             const newApplication = req.body;
 
@@ -306,7 +377,7 @@ async function run() {
 
 
 
-        app.get('/api/application', async (req, res) => {
+        app.get('/api/application',verifyToken,verifyAdmin, async (req, res) => {
 
             const cursor = applicationCollection.find({});
             const result = await cursor.toArray();
@@ -317,7 +388,7 @@ async function run() {
 
 
 
-        app.get('/api/application/user/:userId', async (req, res) => {
+        app.get('/api/application/user/:userId',verifyToken, async (req, res) => {
 
             const { userId } = req.params;
 
@@ -328,7 +399,7 @@ async function run() {
 
 
 
-        app.patch('/api/application/:id', async (req, res) => {
+        app.patch('/api/application/:id',verifyToken,verifyAdmin, async (req, res) => {
 
             const { id } = req.params;
             const { status } = req.body;
@@ -369,7 +440,7 @@ async function run() {
 
         //users api
 
-        app.get('/api/user', async (req, res) => {
+        app.get('/api/user', verifyToken,verifyAdmin, async (req, res) => {
 
             const cursor = usersCollection.find({});
             const result = await cursor.toArray();
@@ -384,7 +455,7 @@ async function run() {
 
 
 
-        app.patch('/api/user/:id/status', async (req, res) => {
+        app.patch('/api/user/:id/status', verifyToken,verifyAdmin, async (req, res) => {
             const { id } = req.params;
             const { status } = req.body;
 
@@ -400,7 +471,7 @@ async function run() {
 
         // promote a user to admin, or demote an admin back to their previous role
 
-        app.patch('/api/user/:id/role', async (req, res) => {
+        app.patch('/api/user/:id/role', verifyToken,verifyAdmin, async (req, res) => {
 
             const { id } = req.params;
             const { action } = req.body;
@@ -493,7 +564,7 @@ async function run() {
         //
 
 
-        app.get("/api/purchases/check", async (req, res) => {
+        app.get("/api/purchases/check", verifyToken, async (req, res) => {
             const { classId, email } = req.query;
 
             if (!classId || !email) {
@@ -513,7 +584,7 @@ async function run() {
         //plan purchases related apis
 
 
-        app.get("/api/purchases", async (req, res) => {
+        app.get("/api/purchases", verifyToken, async (req, res) => {
             const { email } = req.query;
 
             if (!email) {
@@ -531,7 +602,7 @@ async function run() {
 
 
 
-        app.post("/api/purchases", async (req, res) => {
+        app.post("/api/purchases", verifyToken, async (req, res) => {
 
             const { classId, buyerEmail, buyerName, stripeSessionId } = req.body;
 
