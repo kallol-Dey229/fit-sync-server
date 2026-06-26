@@ -38,7 +38,7 @@ const client = new MongoClient(uri, {
 //         await client.connect();
 
 client.connect(()=>{
-    console.log('connected to mongo db')
+    console.log('connecting to mongo db')
 }).catch(console.dir)
 
 
@@ -175,6 +175,15 @@ client.connect(()=>{
             const newClass = req.body;
 
             const result = await classCollection.insertOne(newClass);
+            res.send(result);
+        });
+
+        app.delete('/api/classes/:id', verifyToken, verifyAdmin, async (req, res) => {
+ 
+            const { id } = req.params;
+ 
+            const result = await classCollection.deleteOne({ _id: new ObjectId(id) });
+ 
             res.send(result);
         });
 
@@ -618,6 +627,17 @@ client.connect(()=>{
 
 
 
+        app.get("/api/purchases/all", verifyToken, verifyAdmin, async (req, res) => {
+ 
+            const result = await purchasesCollection.find({}).sort({ purchasedAt: -1 }).toArray();
+ 
+            res.send(result);
+        });
+
+
+
+
+
 
 
         app.post("/api/purchases", verifyToken, async (req, res) => {
@@ -658,7 +678,7 @@ client.connect(()=>{
 
 
 
-        // await client.db("admin").command({ ping: 1 });
+//         await client.db("admin").command({ ping: 1 });
 //         console.log("Pinged your deployment. You successfully connected to MongoDB!");
 //     } finally {
 
