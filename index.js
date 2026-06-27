@@ -193,10 +193,23 @@ client.connect(()=>{
         //forum post api
 
 
-        app.get('/api/forum', async (req, res) => {
-            const cursor = forumPostCollection.find({});
-            const result = await cursor.toArray();
+         app.get('/api/forum', async (req, res) => {
 
+            const posts = await forumPostCollection.find({}).toArray();
+ 
+            const counts = await commentCollection.aggregate([
+                { $group: { _id: "$forumPostId", count: { $sum: 1 } } }
+            ]).toArray();
+ 
+            const countMap = {};
+            
+            counts.forEach((c) => { countMap[c._id] = c.count; });
+ 
+            const result = posts.map((post) => ({
+                ...post,
+                commentCount: countMap[String(post._id)] || 0,
+            }));
+ 
             res.send(result);
         })
 
@@ -290,17 +303,18 @@ client.connect(()=>{
 
 
 
-        // app.patch('/api/comments/:id', async (req, res) => {
-
-        //     const { id } = req.params;
-        //     const commentData = req.body;
-
-        //     const result = await commentCollection.updateOne(
-        //         { _id: new ObjectId(id) },
-        //         { $set: commentData });
-
-        //     res.json(result);
-        // })
+        app.patch("/api/comments/:id", verifyToken, async (req, res) => {
+ 
+            const { id } = req.params;
+            const { userId, comment } = req.body;
+ 
+            const result = await commentCollection.updateOne(
+                { _id: new ObjectId(id), userId: userId },
+                { $set: { comment } }
+            );
+ 
+            res.json(result);
+        });
 
 
 
@@ -674,6 +688,23 @@ client.connect(()=>{
 
 
 
+        //like & dislike related apis
+
+        app.patch('/api/forum/:id/vote', verifyToken, async (req, res) => {
+
+            const { id } = req.params;
+            const { likes, dislikes } = req.body;
+
+            const result = await forumPostCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: { likes, dislikes } }
+            );
+
+            res.send(result);
+        });
+
+
+
 
 
 
@@ -691,7 +722,7 @@ client.connect(()=>{
 
 
 app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`)
+    console.log(`App listening on port ${port}`)
 })
 
 
