@@ -178,13 +178,56 @@ client.connect(()=>{
             res.send(result);
         });
 
-        app.delete('/api/classes/:id', verifyToken, verifyAdmin, async (req, res) => {
+        app.delete('/api/classes/:id', verifyToken, async (req, res) => {
  
             const { id } = req.params;
- 
+
+            if (!ObjectId.isValid(id)) {
+                return res.status(404).send({ message: 'Class not found' });
+            }
+
+            const classToDelete = await classCollection.findOne({ _id: new ObjectId(id) });
+
+            if (!classToDelete) {
+                return res.status(404).send({ message: 'Class not found' });
+            }
+
+            const userRole = String(req.user.role || '').toLowerCase();
+
+            if (userRole !== 'admin') {
+                if (userRole !== 'trainer') {
+                    return res.status(403).send({
+                        message: 'Only trainers or admins can delete classes.',
+                    });
+                }
+
+                const authenticatedIds = [req.user._id, req.user.id]
+                    .filter(Boolean)
+                    .map(String);
+                const classOwnerIds = [
+                    classToDelete.trainerId,
+                    classToDelete.authorId,
+                    classToDelete.userId,
+                ]
+                    .filter(Boolean)
+                    .map(String);
+                const ownsClass = authenticatedIds.some((id) =>
+                    classOwnerIds.includes(id)
+                );
+
+                if (!ownsClass) {
+                    return res.status(403).send({
+                        message: 'You can only delete your own classes.',
+                    });
+                }
+            }
+
             const result = await classCollection.deleteOne({ _id: new ObjectId(id) });
- 
-            res.send(result);
+
+            res.send({
+                success: true,
+                deletedCount: result.deletedCount,
+            });
         });
 
 
@@ -420,7 +463,7 @@ client.connect(()=>{
 
         app.get('/api/application',verifyToken,verifyAdmin, async (req, res) => {
 
-            const cursor = applicationCollection.find({});
+            const cursor = applicationCollection.find({ status: "ACTIVE" });
             const result = await cursor.toArray();
 
             res.send(result);
@@ -435,7 +478,7 @@ client.connect(()=>{
 
             const result = await applicationCollection.find({ userId: String(userId) }).sort({createdAt: -1 }).limit(1).toArray();
 
-            res.send(result[0] || null);
+            res.json(result[0] || null);
         });
 
 
