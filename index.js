@@ -243,7 +243,7 @@ client.connect(()=>{
             const counts = await commentCollection.aggregate([
                 { $group: { _id: "$forumPostId", count: { $sum: 1 } } }
             ]).toArray();
- 
+ //
             const countMap = {};
             
             counts.forEach((c) => { countMap[c._id] = c.count; });
